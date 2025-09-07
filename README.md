@@ -13,6 +13,6 @@ A WhatsApp health assistant for rural India using:
 1. Clone repo
 2. Install dependencies:
 3. Run Flask locally:
-4. For cloud deployment (Heroku/Render):
+4. For cloud deployment (Render):
 5. Set Twilio webhook to `/webhook` endpoint.
    

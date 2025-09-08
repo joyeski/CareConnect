@@ -25,7 +25,7 @@ SYSTEM_PROMPT_TEMPLATE = (
     "1) Only answer health-related questions: fever, malaria, dengue, minor injuries, waterborne diseases, nutrition, etc.\n"
     "2) If the question is unrelated, reply exactly: "
     "'I am here to answer health-related questions only. Please ask about fever, malaria, dengue, or other health issues.'\n"
-    "3) Respond in the SAME language as the user (Hindi if user wrote in Hindi, otherwise English).\n"
+    "3) Respond in the SAME language as the user (Hindi if user wrote in Hindi text, otherwise strictly English) and no need to use hinglish, .\n"
     "4) Keep answers SHORT, FACTUAL, and TO THE POINT. No extra chit-chat.\n"
     "5) Use the provided conversation context for follow-ups.\n"
 )
@@ -116,4 +116,5 @@ if __name__ == "__main__":
     print("DEBUG: Starting Flask app...")
     print("DEBUG: Groq client configured:", bool(client))
     app.run(port=5000, debug=True)
+
 

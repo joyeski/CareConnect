@@ -1,73 +1,68 @@
 import json
-import requests
+import os
+import time
 from flask import Flask, request, Response
 from twilio.twiml.messaging_response import MessagingResponse
 from langdetect import detect
-from rapidfuzz import process
-import time
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
+from groq import Groq
 
 app = Flask(__name__)
 
-# Load FAQs from JSON
+#FAQs from JSON
 with open("responses.json", "r", encoding="utf-8") as f:
     responses = json.load(f)
 
+questions_list = list(responses.keys())
+vectorizer = TfidfVectorizer().fit(questions_list)
+question_vectors = vectorizer.transform(questions_list)
+
 user_contexts = {}
 
-# Ollama query
-def query_ollama(user_input, context="", lang="en"):
-    try:
-        health_context = (
-            "You are a rural health assistant in India. Your users are mostly non-technical and may speak Hindi or simple English. "
-            "Always respond directly in the language the user writes in. "
-            "Keep answers short, simple, and factual. "
-            "Only respond to health-related queries: fever, malaria, dengue, minor injuries, waterborne diseases, nutrition, and general health advice. "
-            "Do NOT give any general, unrelated, or unnecessary answers. "
-            "If the user writes in Hindi, answer in Hindi directly. "
-            "If a query is unrelated to health, reply politely: 'I am here to answer health-related questions only. Please ask about fever, malaria, dengue, or other health issues.' "
-            f"Conversation context (for follow-ups): {context}"
-        )
+client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
-        response = requests.post(
-            "http://127.0.0.1:11434/api/generate",
-            json={
-                "model": "tinyllama",
-                "prompt": f"{health_context}\n\nUser: {user_input}\nAssistant:",
-            },
-            stream=True
-        )
+def query_groq(user_input, context="", lang="en"):
+    health_context = (
+        "You are a rural health assistant in India. "
+        "STRICTLY follow these rules:\n"
+        "1. Only answer health-related questions: fever, malaria, dengue, minor injuries, nutrition, waterborne diseases, etc.\n"
+        "2. If the question is unrelated, reply exactly: "
+        "'I am here to answer health-related questions only. Please ask about fever, malaria, dengue, or other health issues.'\n"
+        "3. Respond in the SAME language as the user (Hindi if Hindi, English if English).\n"
+        "4. Keep answers short, factual, and to the point. No unnecessary details or chit-chat.\n"
+        f"5. Use this conversation context for follow-ups: {context}"
+    )
 
-        if response.status_code == 200:
-            full_reply = ""
-            for line in response.iter_lines():
-                if line:
-                    try:
-                        data = json.loads(line.decode("utf-8"))
-                        if "response" in data:
-                            full_reply += data["response"]
-                    except Exception as e:
-                        print("JSON parse error:", e, line)
-            return full_reply.strip() if full_reply else "माफ़ कीजिए, मुझे समझ नहीं आया।"
-        else:
-            return f"Ollama API error: {response.text}"
-    except Exception as e:
-        print("Ollama request failed:", e)
-        return "Sorry, I couldn’t connect to the AI engine."
+    completion = client.chat.completions.create(
+        model="llama3-8b-8192", 
+        messages=[
+            {"role": "system", "content": health_context},
+            {"role": "user", "content": user_input},
+        ],
+        temperature=0.2,
+        max_tokens=200,
+    )
 
-# Semantic search with RapidFuzz
+    return completion.choices[0].message.content.strip()
+
+
 def get_semantic_match(user_input):
-    match, score, _ = process.extractOne(user_input.lower(), responses.keys())
-    if score > 70:  # threshold
-        return match
+    input_vec = vectorizer.transform([user_input])
+    similarities = cosine_similarity(input_vec, question_vectors).flatten()
+    max_idx = similarities.argmax()
+    if similarities[max_idx] > 0.6:  
+        return questions_list[max_idx]
     return None
 
-# Flask webhook
+
+# webhook
 @app.route("/webhook", methods=["POST"])
 def webhook():
     incoming_msg = request.values.get("Body", "").strip()
-    user_id = request.values.get("From", "default_user")
+    user_id = request.values.get("From", "default_user")  # phone number as ID
 
-    # Detect language
+    
     try:
         lang_detected = detect(incoming_msg)
         lang = "hi" if lang_detected.startswith("hi") else "en"
@@ -78,7 +73,7 @@ def webhook():
     msg = resp.message()
     incoming_lower = incoming_msg.lower()
 
-    # Get previous context (reset after 15 min)
+    # Get previous context if exists (reset after 15 min)
     context = ""
     if user_id in user_contexts:
         last_time = user_contexts[user_id].get("last_update", 0)
@@ -88,8 +83,7 @@ def webhook():
             user_contexts.pop(user_id, None)
 
     found = False
-
-    # Exact match
+    
     for question, answer in responses.items():
         if question.lower() == incoming_lower:
             msg.body(answer.get(lang, answer.get("en")))
@@ -97,7 +91,7 @@ def webhook():
             found = True
             break
 
-    # Semantic match
+    #Semantic match
     if not found:
         match_question = get_semantic_match(incoming_lower)
         if match_question:
@@ -105,13 +99,14 @@ def webhook():
             user_contexts[user_id] = {"last_topic": match_question, "last_update": time.time()}
             found = True
 
-    # Ollama fallback
+    #Groq fallback
     if not found:
-        dynamic_answer = query_ollama(incoming_msg, context=context, lang=lang)
+        dynamic_answer = query_groq(incoming_msg, context=context, lang=lang)
         msg.body(dynamic_answer)
-        user_contexts[user_id] = {"last_topic": dynamic_answer[:50], "last_update": time.time()}
+        user_contexts[user_id] = {"last_topic": incoming_msg, "last_update": time.time()}
 
     return Response(str(resp), mimetype="application/xml")
+
 
 if __name__ == "__main__":
     app.run(port=5000, debug=True)

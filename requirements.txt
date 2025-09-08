@@ -4,5 +4,4 @@ twilio==8.10.0
 langdetect==1.0.9
 scikit-learn==1.2.2
 requests==2.31.0
-cython
-wheel
+numpy==1.23.5

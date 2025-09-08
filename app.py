@@ -16,9 +16,7 @@ with open("responses.json", "r", encoding="utf-8") as f:
 # In-memory user context (for prototype). Use a DB for production.
 user_contexts = {}
 
-# Groq client using environment variable
-GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
+client = Groq(api_key="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")
 
 # Strict hard prompt for health-only, short answers
 SYSTEM_PROMPT_TEMPLATE = (
@@ -127,3 +125,4 @@ def webhook():
 
 if __name__ == "__main__":
     app.run(port=5000, debug=True)
+

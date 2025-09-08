@@ -21,7 +21,6 @@ GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
 
 SYSTEM_PROMPT_TEMPLATE = (
-   health_context = (
     "You are a rural health assistant in India. STRICT RULES:\n"
     "1) Always start the FIRST reply with an introduction:\n"
     "   - If the user writes in English: 'Hello I am CareConnect, your healthbot. How can I help you with health related queries?'\n"
@@ -120,6 +119,7 @@ if __name__ == "__main__":
     print("DEBUG: Starting Flask app...")
     print("DEBUG: Groq client configured:", bool(client))
     app.run(port=5000, debug=True)
+
 
 
 

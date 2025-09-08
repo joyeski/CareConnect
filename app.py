@@ -39,7 +39,7 @@ def query_groq(user_input, context="", lang="en"):
         print("DEBUG: Sending request to Groq...", user_input)
         health_context = SYSTEM_PROMPT_TEMPLATE + f"\nConversation context: {context}"
         resp = client.chat.completions.create(
-            model="llama3-7b",  # Updated supported model
+            model="llama-3.1-8b-instant",  
             messages=[
                 {"role": "system", "content": health_context},
                 {"role": "user", "content": user_input},
@@ -116,3 +116,4 @@ if __name__ == "__main__":
     print("DEBUG: Starting Flask app...")
     print("DEBUG: Groq client configured:", bool(client))
     app.run(port=5000, debug=True)
+

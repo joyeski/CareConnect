@@ -32,12 +32,14 @@ SYSTEM_PROMPT_TEMPLATE = (
 
 def query_groq(user_input, context="", lang="en"):
     if client is None:
+        print("DEBUG: Groq client not initialized")
         return ("Sorry, AI engine is not configured. I can still answer common FAQs. "
                 "Please ask about fever, dengue, or malaria.")
-    health_context = SYSTEM_PROMPT_TEMPLATE + f"\nConversation context: {context}"
     try:
-        completion = client.chat.completions.create(
-            model="llama3-7b",
+        print("DEBUG: Sending request to Groq...", user_input)
+        health_context = SYSTEM_PROMPT_TEMPLATE + f"\nConversation context: {context}"
+        resp = client.chat.completions.create(
+            model="llama3-7b",  # Updated supported model
             messages=[
                 {"role": "system", "content": health_context},
                 {"role": "user", "content": user_input},
@@ -45,10 +47,11 @@ def query_groq(user_input, context="", lang="en"):
             temperature=0.15,
             max_tokens=200,
         )
-        return completion.choices[0].message.content.strip()
+        print("DEBUG: Response received")
+        return resp.choices[0].message.content.strip()
     except Exception as e:
-        print("Groq request failed:", e)
-        return "Sorry, I couldn’t reach the AI engine right now."
+        print("DEBUG: Groq request failed:", e)
+        return f"Groq error: {str(e)}"
 
 def get_semantic_match(user_input):
     choices = list(responses.keys())
@@ -73,6 +76,7 @@ def webhook():
     msg = resp.message()
     incoming_lower = incoming_msg.lower()
 
+    # Context handling (15 min expiration)
     context = ""
     if user_id in user_contexts:
         last_time = user_contexts[user_id].get("last_update", 0)
@@ -109,5 +113,6 @@ def webhook():
     return Response(str(resp), mimetype="application/xml")
 
 if __name__ == "__main__":
+    print("DEBUG: Starting Flask app...")
+    print("DEBUG: Groq client configured:", bool(client))
     app.run(port=5000, debug=True)
-

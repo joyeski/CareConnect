@@ -37,7 +37,7 @@ def query_groq(user_input, context="", lang="en"):
     health_context = SYSTEM_PROMPT_TEMPLATE + f"\nConversation context: {context}"
     try:
         completion = client.chat.completions.create(
-            model="llama3-8b-8192",
+            model="llama3-7b",
             messages=[
                 {"role": "system", "content": health_context},
                 {"role": "user", "content": user_input},
@@ -110,3 +110,4 @@ def webhook():
 
 if __name__ == "__main__":
     app.run(port=5000, debug=True)
+

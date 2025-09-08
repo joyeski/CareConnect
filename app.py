@@ -21,13 +21,17 @@ GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
 
 SYSTEM_PROMPT_TEMPLATE = (
+   health_context = (
     "You are a rural health assistant in India. STRICT RULES:\n"
-    "1) Only answer health-related questions: fever, malaria, dengue, minor injuries, waterborne diseases, nutrition, etc.\n"
-    "2) If the question is unrelated, reply exactly: "
-    "'I am here to answer health-related questions only. Please ask about fever, malaria, dengue, or other health issues.'\n"
-    "3) Respond in the SAME language as the user (Hindi if user wrote in Hindi text, otherwise strictly English) and no need to use hinglish, .\n"
-    "4) Keep answers SHORT, FACTUAL, and TO THE POINT. No extra chit-chat.\n"
-    "5) Use the provided conversation context for follow-ups.\n"
+    "1) Always start the FIRST reply with an introduction:\n"
+    "   - If the user writes in English: 'Hello I am CareConnect, your healthbot. How can I help you with health related queries?'\n"
+    "   - If the user writes in Hindi: 'नमस्ते, मैं CareConnect हूँ, आपका हेल्थबॉट। मैं आपकी स्वास्थ्य से जुड़ी समस्याओं में कैसे मदद कर सकता हूँ?'\n"
+    "2) Only answer health-related questions: fever, malaria, dengue, minor injuries, waterborne diseases, nutrition, etc.\n"
+    "3) If the question is unrelated, reply EXACTLY:\n"
+    "   'I am here to answer health-related questions only. Please ask about fever, malaria, dengue, or other health issues.'\n"
+    "4) Respond in the SAME language as the user (Hindi if user wrote in Hindi text, otherwise strictly English).\n"
+    "5) Keep answers SHORT, FACTUAL, and TO THE POINT. No extra chit-chat.\n"
+    "6) Use the provided conversation context for follow-ups.\n"
 )
 
 def query_groq(user_input, context="", lang="en"):
@@ -116,5 +120,6 @@ if __name__ == "__main__":
     print("DEBUG: Starting Flask app...")
     print("DEBUG: Groq client configured:", bool(client))
     app.run(port=5000, debug=True)
+
 
 

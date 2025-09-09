@@ -15,16 +15,7 @@ with open("responses.json", "r", encoding="utf-8") as f:
 questions_list = list(responses.keys())
 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-if GROQ_API_KEY:
-    try:
-        client = Groq(api_key=GROQ_API_KEY)
-        print("✅ Groq client initialized")
-    except Exception as e:
-        client = None
-        print(f"❌ Failed to init Groq client: {e}")
-else:
-    client = None
-    print("❌ No GROQ_API_KEY found")
+client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
 
 SYSTEM_PROMPT = (
     "You are a rural health assistant in India. STRICT RULES:\n"
@@ -42,7 +33,6 @@ def query_groq(user_input, context="", lang="en"):
     if not client:
         return "⚠️ AI engine not configured (missing API key)."
     try:
-        print(f"🔎 Querying Groq | Input: {user_input} | Context: {context}")
         response = client.chat.completions.create(
             model="llama-3.1-8b-instant",
             messages=[
@@ -52,15 +42,14 @@ def query_groq(user_input, context="", lang="en"):
             temperature=0.2,
             max_tokens=200,
         )
-        result = response.choices[0].message.content.strip()
-        print(f"✅ Groq Response: {result}")
-        return result
+        return response.choices[0].message.content.strip()
     except Exception as e:
-        print(f"❌ Groq request failed: {e}")
         return f"⚠️ Groq request failed: {e}"
 
 def get_fuzzy_match(user_input):
-    match, score, _ = process.extractOne(user_input, questions_list, scorer=fuzz.ratio)
+    match, score, _ = process.extractOne(
+        user_input, questions_list, scorer=fuzz.ratio
+    )
     if score > 70:
         return match
     return None
@@ -79,6 +68,7 @@ def webhook():
 
     resp = MessagingResponse()
     msg = resp.message()
+    reply = None
 
     context = ""
     if user_id in user_contexts:
@@ -93,9 +83,8 @@ def webhook():
         if question.lower() == incoming_msg.lower():
             reply = answer.get(lang, answer.get("en"))
             print(f"✅ Exact match reply: {reply}")
-            msg.body(reply)
-            user_contexts[user_id] = {"last_topic": question, "last_update": time.time()}
             found = True
+            user_contexts[user_id] = {"last_topic": question, "last_update": time.time()}
             break
 
     if not found:
@@ -103,17 +92,16 @@ def webhook():
         if match_question:
             reply = responses[match_question].get(lang, responses[match_question].get("en"))
             print(f"✅ Fuzzy match reply: {reply}")
-            msg.body(reply)
-            user_contexts[user_id] = {"last_topic": match_question, "last_update": time.time()}
             found = True
+            user_contexts[user_id] = {"last_topic": match_question, "last_update": time.time()}
 
     if not found:
-        dynamic_answer = query_groq(incoming_msg, context=context, lang=lang)
-        print(f"🤖 Dynamic answer: {dynamic_answer}")
-        msg.body(dynamic_answer)
+        reply = query_groq(incoming_msg, context=context, lang=lang)
+        print(f"🤖 Dynamic answer: {reply}")
         user_contexts[user_id] = {"last_topic": incoming_msg, "last_update": time.time()}
 
-    print(f"📤 Outgoing to {user_id}: {msg.body}")
+    msg.body(reply)
+    print(f"📤 Outgoing to {user_id}: {reply}")
     return Response(str(resp), mimetype="application/xml")
 
 if __name__ == "__main__":

@@ -66,6 +66,10 @@ def webhook():
     user_id = request.values.get("From", "default_user")
     print(f"📩 Incoming from {user_id}: {incoming_msg}")
 
+    resp = MessagingResponse()  
+    msg = resp.message()
+
+    # Greeting handling
     greetings = ["hi", "hello", "hey", "hii", "helo"]
     if incoming_msg.lower() in greetings:
         reply = "Hello, I am CareConnect, your healthbot. How can I help you with health-related queries?"
@@ -81,6 +85,9 @@ def webhook():
             context = f"Previous topic: {user_contexts[user_id].get('last_topic','')}"
         else:
             user_contexts.pop(user_id, None)
+
+    # (Continue with exact match / fuzzy / Groq logic here …)
+
 
     # 1. Exact match
     if incoming_msg.lower() in responses:
@@ -110,4 +117,5 @@ def webhook():
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 5000))  # Render sets PORT automatically
     app.run(host="0.0.0.0", port=port, debug=True)
+
 

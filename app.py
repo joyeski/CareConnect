@@ -20,13 +20,14 @@ GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
 
 SYSTEM_PROMPT = (
-    "You are a rural health assistant in India. STRICT RULES:\n"
-    "1) Only answer health-related questions: fever, malaria, dengue, minor injuries, waterborne diseases, nutrition, etc.\n"
-    "2) If the question is unrelated (except 'Hi','hello','namaste' or any other greeting, reply EXACTLY:\n"
-    "'I am here to answer health-related questions only. Please ask about health related information.'\n"
-    "3) Respond in the SAME language as the user (Hindi if Hindi, else English).\n"
+    "You are CareConnect, a rural health assistant in India.\n"
+    "STRICT RULES:\n"
+    "1) Always respond in ENGLISH, even if user writes in Hindi or Hinglish.\n"
+    "2) Only answer health-related questions: diseases, symptoms, nutrition, hygiene, minor injuries, prevention, treatments.\n"
+    "3) If the question is completely unrelated to health, reply EXACTLY:\n"
+    "'I am here to answer health-related questions only. Please ask about fever, malaria, dengue, or other health issues.'\n"
     "4) Keep answers SHORT, FACTUAL, and TO THE POINT. No extra chit-chat.\n"
-    "5) Use provided conversation context for follow-ups.\n"
+    "5) Use the provided conversation context for follow-ups.\n"
 )
 
 user_contexts = {}
@@ -69,7 +70,7 @@ def webhook():
     resp = MessagingResponse()
     msg = resp.message()
 
-    # Handle greetings first
+    # Greeting check
     greetings = ["hi", "hello", "hey", "hii", "helo"]
     if incoming_msg.lower() in greetings:
         reply = "Hello, I am CareConnect, your healthbot. How can I help you with health-related queries?"
@@ -77,12 +78,7 @@ def webhook():
         print(f"👋 Greeting reply: {reply}")
         return Response(str(resp), mimetype="application/xml")
 
-    # Language detection 
-    try:
-        lang_detected = detect(incoming_msg)
-        lang = "en" if not lang_detected.startswith("hi") else "en"
-    except:
-        lang = "en"
+    lang = "en"  # force English only
 
     # Restore context
     context = ""
@@ -93,26 +89,29 @@ def webhook():
         else:
             user_contexts.pop(user_id, None)
 
-    # Exact match check
+    reply = None
     found = False
-    for question, answer in responses.items():
-        if question.lower() == incoming_msg.lower():
-            reply = answer.get(lang, answer.get("en"))
-            print(f"✅ Exact match reply: {reply}")
-            found = True
-            user_contexts[user_id] = {"last_topic": question, "last_update": time.time()}
-            break
 
-    # Fuzzy match if no exact
+    # ✅ Exact match check
+    if incoming_msg.lower() in [q.lower() for q in responses.keys()]:
+        for question, answer in responses.items():
+            if question.lower() == incoming_msg.lower():
+                reply = answer.get("en")
+                found = True
+                print(f"✅ Exact match reply: {reply}")
+                user_contexts[user_id] = {"last_topic": question, "last_update": time.time()}
+                break
+
+    # ✅ Fuzzy match check
     if not found:
         match_question = get_fuzzy_match(incoming_msg)
         if match_question:
-            reply = responses[match_question].get(lang, responses[match_question].get("en"))
-            print(f"✅ Fuzzy match reply: {reply}")
+            reply = responses[match_question].get("en")
             found = True
+            print(f"✅ Fuzzy match reply: {reply}")
             user_contexts[user_id] = {"last_topic": match_question, "last_update": time.time()}
 
-    # Fallback to Groq
+    # ✅ Only call Groq if no JSON match
     if not found:
         reply = query_groq(incoming_msg, context=context, lang=lang)
         print(f"🤖 Dynamic answer: {reply}")
@@ -123,9 +122,11 @@ def webhook():
     return Response(str(resp), mimetype="application/xml")
 
 
+
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 5000))  # Render sets PORT automatically
     app.run(host="0.0.0.0", port=port, debug=True)
+
 
 
 

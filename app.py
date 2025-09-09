@@ -22,8 +22,8 @@ client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
 SYSTEM_PROMPT = (
     "You are a rural health assistant in India. STRICT RULES:\n"
     "1) Only answer health-related questions: fever, malaria, dengue, minor injuries, waterborne diseases, nutrition, etc.\n"
-    "2) If the question is unrelated, reply EXACTLY:\n"
-    "'I am here to answer health-related questions only. Please ask about fever, malaria, dengue, or other health issues.'\n"
+    "2) If the question is unrelated (except 'Hi','hello','namaste' or any other greeting, reply EXACTLY:\n"
+    "'I am here to answer health-related questions only. Please ask about health related information.'\n"
     "3) Respond in the SAME language as the user (Hindi if Hindi, else English).\n"
     "4) Keep answers SHORT, FACTUAL, and TO THE POINT. No extra chit-chat.\n"
     "5) Use provided conversation context for follow-ups.\n"
@@ -66,14 +66,12 @@ def webhook():
     user_id = request.values.get("From", "default_user")
     print(f"📩 Incoming from {user_id}: {incoming_msg}")
 
-    # Detect language
-    try:
-        lang_detected = detect(incoming_msg)
-        lang = "hi" if lang_detected.startswith("hi") else "en"
-    except:
-        lang = "en"
-
-    reply = "⚠️ Sorry, I couldn’t process that. Please ask about fever, malaria, dengue, or other health issues."
+    greetings = ["hi", "hello", "hey", "hii", "helo"]
+    if incoming_msg.lower() in greetings:
+        reply = "Hello, I am CareConnect, your healthbot. How can I help you with health-related queries?"
+        msg.body(reply)
+        print(f"👋 Greeting reply: {reply}")
+        return Response(str(resp), mimetype="application/xml")
 
     # Restore context
     context = ""
@@ -112,3 +110,4 @@ def webhook():
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 5000))  # Render sets PORT automatically
     app.run(host="0.0.0.0", port=port, debug=True)
+

@@ -20,12 +20,12 @@ GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
 
 SYSTEM_PROMPT = (
-    "You are CareConnect, a rural health assistant in India.\n"
+    "You are CareConnect, a rural health assistant.\n"
     "STRICT RULES:\n"
     "1) Always respond in ENGLISH, even if user writes in Hindi or Hinglish.\n"
     "2) Only answer health-related questions: diseases, symptoms, nutrition, hygiene, minor injuries, prevention, treatments.\n"
-    "3) If the question is completely unrelated to health, reply EXACTLY:\n"
-    "'I am here to answer health-related questions only. Please ask about fever, malaria, dengue, or other health issues.'\n"
+    "3) If the question is completely unrelated to mental or physical health, reply EXACTLY:\n"
+    "'I am here to answer health-related questions only. Please ask health related issues.'\n"
     "4) Keep answers SHORT, FACTUAL, and TO THE POINT. No extra chit-chat.\n"
     "5) Use the provided conversation context for follow-ups.\n"
 )
@@ -51,11 +51,17 @@ def query_groq(user_input, context="", lang="en"):
         return f"⚠️ Groq request failed: {e}"
 
 def get_fuzzy_match(user_input):
-    """Find closest match from responses.json"""
+    user_input_lower = user_input.lower()
+    for key in questions_list:
+        if key.lower() in user_input_lower:
+            return key  
     match, score, _ = process.extractOne(
         user_input, questions_list, scorer=fuzz.ratio
     )
-    return match if score > 70 else None
+    if score > 60:  
+        return match
+
+    return None
 
 @app.route("/", methods=["GET"])
 def home():
@@ -126,6 +132,7 @@ def webhook():
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 5000))  # Render sets PORT automatically
     app.run(host="0.0.0.0", port=port, debug=True)
+
 
 
 

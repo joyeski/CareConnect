@@ -26,9 +26,8 @@ SYSTEM_PROMPT_TEMPLATE = (
     "1) Only answer health-related questions: fever, malaria, dengue, minor injuries, waterborne diseases, nutrition, etc.\n"
     "2) If the question is unrelated, reply EXACTLY:\n"
     "   'I am here to answer health-related questions only. Please ask about fever, malaria, dengue, or other health issues.'\n"
-    "3) Always respond in ENGLISH.\n"
-    "4) Keep answers SHORT, FACTUAL, and TO THE POINT. No extra chit-chat.\n"
-    "5) Use the provided conversation context for follow-ups.\n\n"
+    "3) Keep answers SHORT, FACTUAL, and TO THE POINT. No extra chit-chat.\n"
+    "4) Use the provided conversation context for follow-ups.\n\n"
     "Conversation context: {context}\n"
 )
 
@@ -39,7 +38,7 @@ def query_groq(user_input, context=""):
     try:
         system_prompt = SYSTEM_PROMPT_TEMPLATE.format(context=context)
         completion = client.chat.completions.create(
-            model="llama-3.1-8b-instant",  # ✅ valid Groq model
+            model="llama-3.1-8b-instant", 
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_input},
@@ -107,3 +106,4 @@ def webhook():
 
 if __name__ == "__main__":
     app.run(port=5000, debug=True)
+

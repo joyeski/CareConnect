@@ -66,16 +66,23 @@ def webhook():
     user_id = request.values.get("From", "default_user")
     print(f"📩 Incoming from {user_id}: {incoming_msg}")
 
-    resp = MessagingResponse()  
+    resp = MessagingResponse()
     msg = resp.message()
 
-    # Greeting handling
+    # Handle greetings first
     greetings = ["hi", "hello", "hey", "hii", "helo"]
     if incoming_msg.lower() in greetings:
         reply = "Hello, I am CareConnect, your healthbot. How can I help you with health-related queries?"
         msg.body(reply)
         print(f"👋 Greeting reply: {reply}")
         return Response(str(resp), mimetype="application/xml")
+
+    # Language detection 
+    try:
+        lang_detected = detect(incoming_msg)
+        lang = "en" if not lang_detected.startswith("hi") else "en"
+    except:
+        lang = "en"
 
     # Restore context
     context = ""
@@ -86,36 +93,39 @@ def webhook():
         else:
             user_contexts.pop(user_id, None)
 
-    # (Continue with exact match / fuzzy / Groq logic here …)
+    # Exact match check
+    found = False
+    for question, answer in responses.items():
+        if question.lower() == incoming_msg.lower():
+            reply = answer.get(lang, answer.get("en"))
+            print(f"✅ Exact match reply: {reply}")
+            found = True
+            user_contexts[user_id] = {"last_topic": question, "last_update": time.time()}
+            break
 
-
-    # 1. Exact match
-    if incoming_msg.lower() in responses:
-        reply = responses[incoming_msg.lower()].get(lang, responses[incoming_msg.lower()].get("en"))
-        user_contexts[user_id] = {"last_topic": incoming_msg, "last_update": time.time()}
-        print(f"✅ Exact match reply: {reply}")
-
-    # 2. Fuzzy match
-    else:
+    # Fuzzy match if no exact
+    if not found:
         match_question = get_fuzzy_match(incoming_msg)
         if match_question:
             reply = responses[match_question].get(lang, responses[match_question].get("en"))
-            user_contexts[user_id] = {"last_topic": match_question, "last_update": time.time()}
             print(f"✅ Fuzzy match reply: {reply}")
-        else:
-            # 3. Dynamic Groq fallback
-            reply = query_groq(incoming_msg, context=context, lang=lang)
-            user_contexts[user_id] = {"last_topic": incoming_msg, "last_update": time.time()}
-            print(f"🤖 Dynamic answer: {reply}")
+            found = True
+            user_contexts[user_id] = {"last_topic": match_question, "last_update": time.time()}
 
-    # Send back Twilio-compatible XML
-    resp = MessagingResponse()
-    resp.message(reply)
+    # Fallback to Groq
+    if not found:
+        reply = query_groq(incoming_msg, context=context, lang=lang)
+        print(f"🤖 Dynamic answer: {reply}")
+        user_contexts[user_id] = {"last_topic": incoming_msg, "last_update": time.time()}
+
+    msg.body(reply)
     print(f"📤 Outgoing to {user_id}: {reply}")
     return Response(str(resp), mimetype="application/xml")
+
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 5000))  # Render sets PORT automatically
     app.run(host="0.0.0.0", port=port, debug=True)
+
 
 

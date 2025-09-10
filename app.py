@@ -1,39 +1,41 @@
 import os
 import json
 import time
+import html
 from flask import Flask, request, Response
 from twilio.twiml.messaging_response import MessagingResponse
-from langdetect import detect
 from rapidfuzz import fuzz, process
 from groq import Groq
 
 app = Flask(__name__)
 
+# load responses from JSON
 with open("responses.json", "r", encoding="utf-8") as f:
     responses = json.load(f)
 
 questions_list = list(responses.keys())
 
-GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
+# groq setup
+api_key = os.getenv("GROQ_API_KEY")
+client = Groq(api_key=api_key) if api_key else None
 
-SYSTEM_PROMPT = (
-    "You are CareConnect, a rural health assistant.\n"
-    "STRICT RULES:\n"
-    "1) Always respond in ENGLISH, even if user writes in Hindi or Hinglish.\n"
-    "2) Only answer health-related questions: diseases, symptoms, nutrition, hygiene, minor injuries, prevention, treatments.\n"
-    "3) If the question is completely unrelated to mental or physical health, reply EXACTLY:\n"
-    "'I am here to answer health-related questions only. Please ask health related issues.'\n"
-    "4) Keep answers SHORT, FACTUAL, and TO THE POINT. No extra chit-chat.\n"
-    "5) Use the provided conversation context for follow-ups.\n"
-)
+SYSTEM_PROMPT = """You are CareConnect, a rural health assistant.
+STRICT RULES:
+1) Always respond in ENGLISH, even if user writes in Hindi or Hinglish.
+2) Only answer health-related questions: diseases, symptoms, nutrition, hygiene, minor injuries, prevention, treatments.
+3) If the question is unrelated to health, reply EXACTLY:
+'I am here to answer health-related questions only. Please ask health related issues.'
+4) Keep answers SHORT, FACTUAL, and TO THE POINT.
+5) Use the provided conversation context for follow-ups.
+"""
 
 user_contexts = {}
 
-def query_groq(user_input, context="", lang="en"):
+def ask_groq(user_input, context="", lang="en"):
     if not client:
-        return "⚠️ AI engine not configured (missing API key)."
+        return None
     try:
+        start = time.time()
         response = client.chat.completions.create(
             model="llama-3.1-8b-instant",
             messages=[
@@ -43,18 +45,19 @@ def query_groq(user_input, context="", lang="en"):
             temperature=0.2,
             max_tokens=200,
         )
+        taken = time.time() - start
+        print("Groq response time:", round(taken, 2), "seconds")
         return response.choices[0].message.content.strip()
     except Exception as e:
-        return f"⚠️ Groq request failed: {e}"
+        print("Groq error:", e)
+        return None
 
-def get_fuzzy_match(user_input):
-    user_input_lower = user_input.lower()
+def fuzzy_match(user_input):
+    text = user_input.lower()
     for key in questions_list:
-        if key.lower() in user_input_lower:
+        if key.lower() in text:
             return key
-    match, score, _ = process.extractOne(
-        user_input, questions_list, scorer=fuzz.ratio
-    )
+    match, score, _ = process.extractOne(user_input, questions_list, scorer=fuzz.ratio)
     if score > 60:
         return match
     return None
@@ -67,55 +70,68 @@ def home():
 def webhook():
     incoming_msg = request.values.get("Body", "").strip()
     user_id = request.values.get("From", "default_user")
-    print(f"Incoming from {user_id}: {incoming_msg}")
+    print("Incoming from", user_id, ":", incoming_msg)
 
     resp = MessagingResponse()
     msg = resp.message()
 
+    # greetings
     greetings = ["hi", "hello", "hey", "hii", "helo"]
     if incoming_msg.lower() in greetings:
         reply = "Hello, I am CareConnect, your healthbot. How can I help you with health-related queries?"
         msg.body(reply)
-        print(f"Greeting reply: {reply}")
+        print("Greeting reply:", reply)
+        print("Final TwiML XML:", str(resp))
         return Response(str(resp), mimetype="application/xml")
 
     lang = "en"
-
     context = ""
     if user_id in user_contexts:
         last_time = user_contexts[user_id].get("last_update", 0)
         if time.time() - last_time < 900:
-            context = f"Previous topic: {user_contexts[user_id].get('last_topic','')}"
+            context = "Previous topic: " + user_contexts[user_id].get("last_topic", "")
         else:
             user_contexts.pop(user_id, None)
 
     reply = None
     found = False
 
+    # exact match
     if incoming_msg.lower() in [q.lower() for q in responses.keys()]:
-        for question, answer in responses.items():
-            if question.lower() == incoming_msg.lower():
-                reply = answer.get("en")
+        for q, ans in responses.items():
+            if q.lower() == incoming_msg.lower():
+                reply = ans.get("en")
                 found = True
-                print(f"Exact match reply: {reply}")
-                user_contexts[user_id] = {"last_topic": question, "last_update": time.time()}
+                print("Exact match reply:", reply)
+                user_contexts[user_id] = {"last_topic": q, "last_update": time.time()}
                 break
 
+    # fuzzy match
     if not found:
-        match_question = get_fuzzy_match(incoming_msg)
+        match_question = fuzzy_match(incoming_msg)
         if match_question:
             reply = responses[match_question].get("en")
             found = True
-            print(f"Fuzzy match reply: {reply}")
+            print("Fuzzy match reply:", reply)
             user_contexts[user_id] = {"last_topic": match_question, "last_update": time.time()}
 
+    # groq
     if not found:
-        reply = query_groq(incoming_msg, context=context, lang=lang)
-        print(f"Dynamic answer: {reply}")
+        reply = ask_groq(incoming_msg, context=context, lang=lang)
+        print("AI reply:", reply)
         user_contexts[user_id] = {"last_topic": incoming_msg, "last_update": time.time()}
 
+    # fallback if reply is empty or None
+    if not reply or not reply.strip():
+        reply = "Sorry, I couldn’t generate a reply. Please try asking a health-related question again."
+
+    # escape special chars so Twilio XML doesn’t break
+    reply = html.escape(reply)
+
     msg.body(reply)
-    print(f"Outgoing to {user_id}: {reply}")
+    print("Sending to", user_id, ":", reply)
+    print("Final TwiML XML:", str(resp))
+
     return Response(str(resp), mimetype="application/xml")
 
 if __name__ == "__main__":

@@ -9,13 +9,11 @@ from groq import Groq
 
 app = Flask(__name__)
 
-# Load pre-written responses
 with open("responses.json", "r", encoding="utf-8") as f:
     responses = json.load(f)
 
 questions_list = list(responses.keys())
 
-# Groq setup
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 client = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
 
@@ -33,7 +31,6 @@ SYSTEM_PROMPT = (
 user_contexts = {}
 
 def query_groq(user_input, context="", lang="en"):
-    """Call Groq API"""
     if not client:
         return "⚠️ AI engine not configured (missing API key)."
     try:
@@ -54,39 +51,36 @@ def get_fuzzy_match(user_input):
     user_input_lower = user_input.lower()
     for key in questions_list:
         if key.lower() in user_input_lower:
-            return key  
+            return key
     match, score, _ = process.extractOne(
         user_input, questions_list, scorer=fuzz.ratio
     )
-    if score > 60:  
+    if score > 60:
         return match
-
     return None
 
 @app.route("/", methods=["GET"])
 def home():
-    return "✅ CareConnect WhatsApp Bot is running!"
+    return "CareConnect WhatsApp Bot is running!"
 
 @app.route("/webhook", methods=["POST"])
 def webhook():
     incoming_msg = request.values.get("Body", "").strip()
     user_id = request.values.get("From", "default_user")
-    print(f"📩 Incoming from {user_id}: {incoming_msg}")
+    print(f"Incoming from {user_id}: {incoming_msg}")
 
     resp = MessagingResponse()
     msg = resp.message()
 
-    # Greeting check
     greetings = ["hi", "hello", "hey", "hii", "helo"]
     if incoming_msg.lower() in greetings:
         reply = "Hello, I am CareConnect, your healthbot. How can I help you with health-related queries?"
         msg.body(reply)
-        print(f"👋 Greeting reply: {reply}")
+        print(f"Greeting reply: {reply}")
         return Response(str(resp), mimetype="application/xml")
 
-    lang = "en"  # force English only
+    lang = "en"
 
-    # Restore context
     context = ""
     if user_id in user_contexts:
         last_time = user_contexts[user_id].get("last_update", 0)
@@ -98,42 +92,32 @@ def webhook():
     reply = None
     found = False
 
-    # ✅ Exact match check
     if incoming_msg.lower() in [q.lower() for q in responses.keys()]:
         for question, answer in responses.items():
             if question.lower() == incoming_msg.lower():
                 reply = answer.get("en")
                 found = True
-                print(f"✅ Exact match reply: {reply}")
+                print(f"Exact match reply: {reply}")
                 user_contexts[user_id] = {"last_topic": question, "last_update": time.time()}
                 break
 
-    # ✅ Fuzzy match check
     if not found:
         match_question = get_fuzzy_match(incoming_msg)
         if match_question:
             reply = responses[match_question].get("en")
             found = True
-            print(f"✅ Fuzzy match reply: {reply}")
+            print(f"Fuzzy match reply: {reply}")
             user_contexts[user_id] = {"last_topic": match_question, "last_update": time.time()}
 
-    # ✅ Only call Groq if no JSON match
     if not found:
         reply = query_groq(incoming_msg, context=context, lang=lang)
-        print(f"🤖 Dynamic answer: {reply}")
+        print(f"Dynamic answer: {reply}")
         user_contexts[user_id] = {"last_topic": incoming_msg, "last_update": time.time()}
 
     msg.body(reply)
-    print(f"📤 Outgoing to {user_id}: {reply}")
+    print(f"Outgoing to {user_id}: {reply}")
     return Response(str(resp), mimetype="application/xml")
 
-
-
 if __name__ == "__main__":
-    port = int(os.getenv("PORT", 5000))  # Render sets PORT automatically
+    port = int(os.getenv("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
-
-
-
-
-

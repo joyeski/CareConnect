@@ -1,15 +1,15 @@
 import os
 import json
 import time
-import html
 from flask import Flask, request, Response
 from twilio.twiml.messaging_response import MessagingResponse
+from langdetect import detect
 from rapidfuzz import fuzz, process
 from groq import Groq
 
 app = Flask(__name__)
 
-# load responses from JSON
+# loading responses from file
 with open("responses.json", "r", encoding="utf-8") as f:
     responses = json.load(f)
 
@@ -17,25 +17,29 @@ questions_list = list(responses.keys())
 
 # groq setup
 api_key = os.getenv("GROQ_API_KEY")
-client = Groq(api_key=api_key) if api_key else None
+if api_key:
+    client = Groq(api_key=api_key)
+else:
+    client = None
 
+# the system rules for the AI
 SYSTEM_PROMPT = """You are CareConnect, a rural health assistant.
 STRICT RULES:
 1) Always respond in ENGLISH, even if user writes in Hindi or Hinglish.
 2) Only answer health-related questions: diseases, symptoms, nutrition, hygiene, minor injuries, prevention, treatments.
-3) If the question is unrelated to health, reply EXACTLY:
+3) If the question is unrelated to mental or physical health, reply EXACTLY:
 'I am here to answer health-related questions only. Please ask health related issues.'
-4) Keep answers SHORT, FACTUAL, and TO THE POINT.
+4) Keep answers SHORT, FACTUAL, and TO THE POINT. No extra chit-chat.
 5) Use the provided conversation context for follow-ups.
 """
 
+# storing user context
 user_contexts = {}
 
 def ask_groq(user_input, context="", lang="en"):
     if not client:
-        return None
+        return "AI engine not working (no API key found)."
     try:
-        start = time.time()
         response = client.chat.completions.create(
             model="llama-3.1-8b-instant",
             messages=[
@@ -45,12 +49,9 @@ def ask_groq(user_input, context="", lang="en"):
             temperature=0.2,
             max_tokens=200,
         )
-        taken = time.time() - start
-        print("Groq response time:", round(taken, 2), "seconds")
         return response.choices[0].message.content.strip()
     except Exception as e:
-        print("Groq error:", e)
-        return None
+        return f"AI request failed: {e}"
 
 def fuzzy_match(user_input):
     text = user_input.lower()
@@ -70,21 +71,20 @@ def home():
 def webhook():
     incoming_msg = request.values.get("Body", "").strip()
     user_id = request.values.get("From", "default_user")
-    print("Incoming from", user_id, ":", incoming_msg)
+    print("Message from", user_id, ":", incoming_msg)
 
     resp = MessagingResponse()
     msg = resp.message()
 
-    # greetings
     greetings = ["hi", "hello", "hey", "hii", "helo"]
     if incoming_msg.lower() in greetings:
         reply = "Hello, I am CareConnect, your healthbot. How can I help you with health-related queries?"
         msg.body(reply)
-        print("Greeting reply:", reply)
-        print("Final TwiML XML:", str(resp))
+        print("Replied:", reply)
         return Response(str(resp), mimetype="application/xml")
 
     lang = "en"
+
     context = ""
     if user_id in user_contexts:
         last_time = user_contexts[user_id].get("last_update", 0)
@@ -96,7 +96,7 @@ def webhook():
     reply = None
     found = False
 
-    # exact match
+    # check exact match
     if incoming_msg.lower() in [q.lower() for q in responses.keys()]:
         for q, ans in responses.items():
             if q.lower() == incoming_msg.lower():
@@ -106,7 +106,7 @@ def webhook():
                 user_contexts[user_id] = {"last_topic": q, "last_update": time.time()}
                 break
 
-    # fuzzy match
+    # check fuzzy match
     if not found:
         match_question = fuzzy_match(incoming_msg)
         if match_question:
@@ -115,23 +115,14 @@ def webhook():
             print("Fuzzy match reply:", reply)
             user_contexts[user_id] = {"last_topic": match_question, "last_update": time.time()}
 
-    # groq
+    # if no match found, ask groq
     if not found:
         reply = ask_groq(incoming_msg, context=context, lang=lang)
         print("AI reply:", reply)
         user_contexts[user_id] = {"last_topic": incoming_msg, "last_update": time.time()}
 
-    # fallback if reply is empty or None
-    if not reply or not reply.strip():
-        reply = "Sorry, I couldn’t generate a reply. Please try asking a health-related question again."
-
-    # escape special chars so Twilio XML doesn’t break
-    reply = html.escape(reply)
-
     msg.body(reply)
     print("Sending to", user_id, ":", reply)
-    print("Final TwiML XML:", str(resp))
-
     return Response(str(resp), mimetype="application/xml")
 
 if __name__ == "__main__":

@@ -4,7 +4,7 @@ import time
 from flask import Flask, request, Response
 from twilio.twiml.messaging_response import MessagingResponse
 from langdetect import detect
-from rapidfuzz import fuzz, process
+from rapidfuzz import process
 from groq import Groq
 from deep_translator import GoogleTranslator
 
@@ -61,58 +61,60 @@ def fuzzy_match(user_input):
 @app.route("/", methods=["GET"])
 def home():
     return "CareConnect WhatsApp Bot is running!"
-
 @app.route("/webhook", methods=['POST'])
 def webhook():
-    # Get user message
     user_text = request.values.get('Body', '').strip()
-    
+
     if not user_text:
-        reply = "Sorry, I didn't get that. Please type something."
         resp = MessagingResponse()
-        resp.message(reply)
+        resp.message("Sorry, I didn't get that. Please type something.")
         return str(resp)
-    
+
     # Step 1: Translate user input to English for matching
     try:
         translated_text = GoogleTranslator(source='auto', target='en').translate(user_text)
-    except:
+    except Exception:
         translated_text = user_text  # fallback if translation fails
-    
-    # Step 2: Find the best match in responses
-    match_question, score = process.extractOne(translated_text, responses.keys())
-    
-    if score < 50:  # threshold for fuzzy match
+
+    # Step 2: Fuzzy match in responses safely
+    try:
+        result = process.extractOne(translated_text, responses.keys())
+        if result is None:
+            match_question, score = None, 0
+        else:
+            match_question, score = result[0], result[1]  # ignore extra values
+    except Exception:
+        match_question, score = None, 0
+
+    # Step 3: Select response in English
+    if score < 50 or match_question is None:
         reply_en = "Sorry, I don't have an answer for that. Please ask something else."
     else:
         reply_en = responses[match_question]["en"]
-    
-    # Step 3: Translate reply back to user language if needed
+
+    # Step 4: Detect user language and translate response back
     try:
-        # Detect language of the original message using Deep Translator auto-detect
+        # Deep Translator auto-detect for original message
         user_lang = GoogleTranslator(source='auto', target='en').detect(user_text)
-    except:
-        user_lang = 'en'  # fallback
-    
+    except Exception:
+        user_lang = 'en'
+
     if user_lang != 'en':
         try:
             reply = GoogleTranslator(source='en', target=user_lang).translate(reply_en)
-        except:
+        except Exception:
             reply = reply_en
     else:
         reply = reply_en
-    
-    # Step 4: Send reply via Twilio
+
+    # Step 5: Send reply via Twilio
     resp = MessagingResponse()
     resp.message(reply)
     return str(resp)
 
 if __name__ == "__main__":
-    app.run(debug=True)
-
-
-if __name__ == "__main__":
     port = int(os.getenv("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
+
 
 

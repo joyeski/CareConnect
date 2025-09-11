@@ -6,6 +6,8 @@ from twilio.twiml.messaging_response import MessagingResponse
 from langdetect import detect
 from rapidfuzz import fuzz, process
 from groq import Groq
+from googletrans import Translator
+
 
 app = Flask(__name__)
 
@@ -67,6 +69,10 @@ def fuzzy_match(user_input):
 def home():
     return "CareConnect WhatsApp Bot is running!"
 
+from googletrans import Translator
+
+translator = Translator()
+
 @app.route("/webhook", methods=["POST"])
 def webhook():
     incoming_msg = request.values.get("Body", "").strip()
@@ -76,15 +82,29 @@ def webhook():
     resp = MessagingResponse()
     msg = resp.message()
 
+    # detect language
+    try:
+        detected_lang = translator.detect(incoming_msg).lang
+    except:
+        detected_lang = "en"
+
+    # greetings
     greetings = ["hi", "hello", "hey", "hii", "helo"]
     if incoming_msg.lower() in greetings:
         reply = "Hello, I am CareConnect, your healthbot. How can I help you with health-related queries?"
+        # translate if needed
+        if detected_lang != "en":
+            try:
+                reply = translator.translate(reply, dest=detected_lang).text
+            except Exception as e:
+                print("⚠️ Translation failed:", e)
         msg.body(reply)
         print("Replied:", reply)
         return Response(str(resp), mimetype="application/xml")
 
-    lang = "en"
+    lang = "en"  # always process in English
 
+    # context restore
     context = ""
     if user_id in user_contexts:
         last_time = user_contexts[user_id].get("last_update", 0)
@@ -100,7 +120,7 @@ def webhook():
     if incoming_msg.lower() in [q.lower() for q in responses.keys()]:
         for q, ans in responses.items():
             if q.lower() == incoming_msg.lower():
-                reply = ans.get("en")
+                reply = ans.get("en")  # always store English answers
                 found = True
                 print("Exact match reply:", reply)
                 user_contexts[user_id] = {"last_topic": q, "last_update": time.time()}
@@ -121,10 +141,19 @@ def webhook():
         print("AI reply:", reply)
         user_contexts[user_id] = {"last_topic": incoming_msg, "last_update": time.time()}
 
+    # translate reply if needed
+    if detected_lang != "en":
+        try:
+            reply = translator.translate(reply, dest=detected_lang).text
+        except Exception as e:
+            print("Translation failed:", e)
+
     msg.body(reply)
     print("Sending to", user_id, ":", reply)
     return Response(str(resp), mimetype="application/xml")
 
+
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
+

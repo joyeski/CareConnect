@@ -4,6 +4,7 @@ CareConnect is a prototype WhatsApp Health Bot designed to provide reliable, qui
 It works using Flask, Twilio WhatsApp API, and an optional AI fallback (Groq / LLM) for complex queries.
 The bot can answer health-related questions (like fever, dengue, nutrition, hygiene, etc.) and can be expanded to support multiple languages.
 
+
 **Features**
 
 1.Predefined responses for common health conditions (e.g., fever, malaria, cough).
@@ -18,6 +19,7 @@ The bot can answer health-related questions (like fever, dengue, nutrition, hygi
 
 6.Ready to integrate with government health/outbreak datasets for real-time updates.
 
+
 **Project Structure**
 
 careconnect/
@@ -30,8 +32,8 @@ careconnect/
  
  ├── README.md             # Project documentation
 
-**Installation & Setup**
 
+**Installation & Setup**
 
 1.Push your project code to GitHub.
 
@@ -53,14 +55,13 @@ TWILIO_AUTH_TOKEN
 
 GROQ_API_KEY (optional, for AI fallback)
 
-GOOGLE_APPLICATION_CREDENTIALS (optional, for translation)
-
 4.Once deployed, Render will give you a public URL like:
 https://careconnect.onrender.com
 
 5.Go to Twilio WhatsApp Sandbox settings and set the webhook:
 
 https://careconnect.onrender.com/webhook
+
 
 **Example Queries**
 

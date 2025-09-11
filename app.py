@@ -48,6 +48,7 @@ def ask_groq(user_input, context=""):
         return f"AI request failed: {e}"
 
 def fuzzy_match(user_input):
+    """Check if input matches any known FAQ."""
     result = process.extractOne(user_input, questions_list, scorer=fuzz.ratio)
     if result and result[1] >= 70:
         return result[0]
@@ -66,7 +67,7 @@ def webhook():
     resp = MessagingResponse()
     msg = resp.message()
 
-    # Detect language of current message
+    # Detect language
     try:
         detected_lang = GoogleTranslator(source="auto", target="en").detect(incoming_msg)
     except Exception:
@@ -78,11 +79,14 @@ def webhook():
     except Exception:
         user_text_en = incoming_msg
 
+    reply_en = None
+
     # Greetings
     greetings = ["hi", "hello", "hey", "hii", "helo", "hola", "bonjour"]
     if incoming_msg.lower() in greetings:
         reply_en = "Hello, I am CareConnect, your healthbot. How can I help you with health-related queries?"
     else:
+        # Restore context if active
         context = ""
         if user_id in user_contexts:
             last_time = user_contexts[user_id].get("last_update", 0)
@@ -91,19 +95,17 @@ def webhook():
             else:
                 user_contexts.pop(user_id, None)
 
-        reply_en = None
         found = False
 
-        # Exact match
-        if user_text_en.lower() in [q.lower() for q in responses.keys()]:
-            for q, ans in responses.items():
-                if q.lower() == user_text_en.lower():
-                    reply_en = ans.get("en")
-                    found = True
-                    user_contexts[user_id] = {"last_topic": q, "last_update": time.time()}
-                    break
+        # Exact match from JSON
+        for q, ans in responses.items():
+            if q.lower() == user_text_en.lower():
+                reply_en = ans.get("en")
+                found = True
+                user_contexts[user_id] = {"last_topic": q, "last_update": time.time()}
+                break
 
-        # Fuzzy match
+        # Fuzzy match from JSON
         if not found:
             match_question = fuzzy_match(user_text_en)
             if match_question:
@@ -111,22 +113,21 @@ def webhook():
                 found = True
                 user_contexts[user_id] = {"last_topic": match_question, "last_update": time.time()}
 
-        # Groq AI fallback
+        # Groq fallback
         if not found:
             reply_en = ask_groq(user_text_en, context=context)
             user_contexts[user_id] = {"last_topic": user_text_en, "last_update": time.time()}
 
-    # Translate reply back to user’s language if needed
+    # Always translate reply back if needed
+    reply = reply_en
     if detected_lang != "en":
         try:
             reply = GoogleTranslator(source="en", target=detected_lang).translate(reply_en)
         except Exception:
             reply = reply_en
-    else:
-        reply = reply_en
 
     msg.body(reply)
-    print(f"Detected lang={detected_lang}, Reply={reply}")
+    print(f"Detected={detected_lang}, UserTextEN={user_text_en}, ReplyEN={reply_en}, FinalReply={reply}")
     return Response(str(resp), mimetype="application/xml")
 
 if __name__ == "__main__":

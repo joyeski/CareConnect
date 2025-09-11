@@ -5,7 +5,7 @@ from flask import Flask, request, Response
 from twilio.twiml.messaging_response import MessagingResponse
 from langdetect import detect
 from rapidfuzz import fuzz, process
-from groq import Groq
+import groq
 from googletrans import Translator
 
 
@@ -156,4 +156,5 @@ def webhook():
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
+
 

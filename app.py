@@ -71,6 +71,8 @@ def ask_groq(user_input, context="", lang="en"):
 def home():
     return "CareConnect WhatsApp Bot is running!"
 
+# ... (rest of the code is the same) ...
+
 @app.route("/webhook", methods=["POST"])
 def webhook():
     incoming_msg = request.values.get("Body", "").strip()
@@ -82,6 +84,7 @@ def webhook():
 
     # --- Language Detection (Always Re-Detect) ---
     user_lang = get_language(incoming_msg)
+    cleaned_msg = clean_text(incoming_msg)
 
     # --- Greeting Check ---
     greetings = {
@@ -91,22 +94,25 @@ def webhook():
     
     current_greetings = greetings.get(user_lang, greetings.get("en", []))
 
-    if clean_text(incoming_msg) in current_greetings:
-        greeting_response = responses.get("greeting", {}).get(user_lang, responses["greeting"].get("en", "Hello, I am CareConnect. How can I help you?"))
+    if cleaned_msg in current_greetings:
+        greeting_response = responses.get("greeting", {}).get(user_lang, responses.get("greeting", {}).get("en", "Hello, I am CareConnect. How can I help you?"))
         msg.body(greeting_response)
         print("Replied:", greeting_response)
         return Response(str(resp), mimetype="application/xml")
 
     # --- Check JSON by keyword ---
     reply = None
+    # Iterate through each keyword in your JSON
     for keyword, lang_responses in responses.items():
-        if user_lang in lang_responses and clean_text(lang_responses[user_lang]) in clean_text(incoming_msg):
+        # Check if the cleaned incoming message contains this keyword
+        if keyword.lower() in cleaned_msg:
             reply = lang_responses.get(user_lang)
-            print("Matched keyword:", keyword, "in language:", user_lang, "→ Reply:", reply)
-            user_contexts[user_id] = {"last_topic": keyword, "last_update": time.time()}
-            break
+            if reply:
+                print("Matched keyword:", keyword, "in language:", user_lang, "→ Reply:", reply)
+                user_contexts[user_id] = {"last_topic": keyword, "last_update": time.time()}
+                break
 
-    # Fallback to Groq
+    # Fallback to Groq if no keyword was matched
     if not reply:
         context = ""
         # Check for context within the 15-minute window
@@ -129,3 +135,4 @@ def webhook():
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
+

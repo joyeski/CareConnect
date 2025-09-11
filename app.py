@@ -46,7 +46,7 @@ def ask_groq(user_input, context=""):
 
 def fuzzy_match(user_input):
     result = process.extractOne(user_input, questions_list, scorer=fuzz.ratio)
-    if result and result[1] >= 60:  # lowered threshold for better matching
+    if result and result[1] >= 60:  
         return result[0]
     return None
 
@@ -69,7 +69,6 @@ def webhook():
     except Exception:
         detected_lang = "en"
 
-    # Translate input to English
     try:
         user_text_en = GoogleTranslator(source="auto", target="en").translate(incoming_msg)
     except Exception:
@@ -77,10 +76,10 @@ def webhook():
 
     reply_en = None
 
-    # Greetings
     greetings = ["hi", "hello", "hey", "hii", "helo", "hola", "bonjour"]
     if incoming_msg.lower() in greetings:
         reply_en = "Hello, I am CareConnect, your healthbot. How can I help you with health-related queries?"
+        detected_lang = "en"  
     else:
         # FAQ check
         match_question = fuzzy_match(user_text_en)
@@ -95,7 +94,6 @@ def webhook():
             reply_en = ask_groq(user_text_en, context=context)
             user_contexts[user_id] = {"last_topic": user_text_en, "last_update": time.time()}
 
-    # Translate reply back to user language
     reply = reply_en
     if detected_lang != "en":
         try:
@@ -110,3 +108,4 @@ def webhook():
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
+

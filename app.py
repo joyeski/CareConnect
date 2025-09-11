@@ -1,6 +1,7 @@
 import os
 import json
 import time
+import string
 from flask import Flask, request, Response
 from twilio.twiml.messaging_response import MessagingResponse
 from rapidfuzz import fuzz, process
@@ -30,6 +31,10 @@ STRICT RULES:
 # Store user contexts
 user_contexts = {}
 
+def clean_text(text):
+    """Lowercase and remove punctuation for better matching."""
+    return text.lower().translate(str.maketrans('', '', string.punctuation)).strip()
+
 def ask_groq(user_input, context="", lang="en"):
     if not client:
         return "AI engine not working (no API key found)."
@@ -48,9 +53,9 @@ def ask_groq(user_input, context="", lang="en"):
         return f"AI request failed: {e}"
 
 def fuzzy_match(user_input):
-    result = process.extractOne(user_input, questions_list, scorer=fuzz.ratio)
-    if result and result[1] >= 70:  # minimum confidence
-        return result[0]
+    match, score, _ = process.extractOne(user_input, questions_list, scorer=fuzz.ratio)
+    if score >= 70:
+        return match
     return None
 
 @app.route("/", methods=["GET"])
@@ -66,21 +71,19 @@ def webhook():
     resp = MessagingResponse()
     msg = resp.message()
 
-    # Greetings
+    clean_msg = clean_text(incoming_msg)
+
     greetings = ["hi", "hello", "hey", "hii", "helo"]
-    if incoming_msg.lower() in greetings:
+    if clean_msg in greetings:
         reply = "Hello, I am CareConnect, your healthbot. How can I help you with health-related queries?"
         msg.body(reply)
         print("Replied:", reply)
         return Response(str(resp), mimetype="application/xml")
 
-    lang = "en"
     context = ""
-
-    # Restore conversation if recent
     if user_id in user_contexts:
         last_time = user_contexts[user_id].get("last_update", 0)
-        if time.time() - last_time < 900:  # 15 minutes
+        if time.time() - last_time < 900: 
             context = "Previous topic: " + user_contexts[user_id].get("last_topic", "")
         else:
             user_contexts.pop(user_id, None)
@@ -89,27 +92,26 @@ def webhook():
     found = False
 
     # Exact match
-    if incoming_msg.lower() in [q.lower() for q in responses.keys()]:
-        for q, ans in responses.items():
-            if q.lower() == incoming_msg.lower():
-                reply = ans.get("en")
-                found = True
-                print("Exact match reply:", reply)
-                user_contexts[user_id] = {"last_topic": q, "last_update": time.time()}
-                break
+    for q, ans in responses.items():
+        if clean_text(q) == clean_msg:
+            reply = ans.get("en")
+            found = True
+            print("Exact match reply:", reply)
+            user_contexts[user_id] = {"last_topic": q, "last_update": time.time()}
+            break
 
     # Fuzzy match
     if not found:
-        match_question = fuzzy_match(incoming_msg)
+        match_question = fuzzy_match(clean_msg)
         if match_question:
             reply = responses[match_question].get("en")
             found = True
             print("Fuzzy match reply:", reply)
             user_contexts[user_id] = {"last_topic": match_question, "last_update": time.time()}
 
-    # Groq AI fallback
+    # Groq fallback
     if not found:
-        reply = ask_groq(incoming_msg, context=context, lang=lang)
+        reply = ask_groq(incoming_msg, context=context)
         print("AI reply:", reply)
         user_contexts[user_id] = {"last_topic": incoming_msg, "last_update": time.time()}
 

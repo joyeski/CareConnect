@@ -28,7 +28,6 @@ STRICT RULES:
 4) Use the provided conversation context for follow-ups.
 """
 
-# Store user contexts
 user_contexts = {}
 
 def clean_text(text):
@@ -64,54 +63,40 @@ def home():
 
 @app.route("/webhook", methods=["POST"])
 def webhook():
-    incoming_msg = request.values.get("Body", "").strip()
+    incoming_msg = request.values.get("Body", "").strip().lower()
     user_id = request.values.get("From", "default_user")
     print("Message from", user_id, ":", incoming_msg)
 
     resp = MessagingResponse()
     msg = resp.message()
 
-    clean_msg = clean_text(incoming_msg)
-
     greetings = ["hi", "hello", "hey", "hii", "helo"]
-    if clean_msg in greetings:
+    if incoming_msg in greetings:
         reply = "Hello, I am CareConnect, your healthbot. How can I help you with health-related queries?"
         msg.body(reply)
         print("Replied:", reply)
         return Response(str(resp), mimetype="application/xml")
 
-    context = ""
-    if user_id in user_contexts:
-        last_time = user_contexts[user_id].get("last_update", 0)
-        if time.time() - last_time < 900: 
-            context = "Previous topic: " + user_contexts[user_id].get("last_topic", "")
-        else:
-            user_contexts.pop(user_id, None)
-
+    # --- Check JSON by keyword ---
     reply = None
-    found = False
-
-    # Exact match
-    for q, ans in responses.items():
-        if clean_text(q) == clean_msg:
-            reply = ans.get("en")
-            found = True
-            print("Exact match reply:", reply)
-            user_contexts[user_id] = {"last_topic": q, "last_update": time.time()}
+    for keyword, ans in responses.items():
+        if keyword in incoming_msg:  
+            reply = ans.get("en")    
+            print("Matched keyword:", keyword, "→ Reply:", reply)
+            user_contexts[user_id] = {"last_topic": keyword, "last_update": time.time()}
             break
 
-    # Fuzzy match
-    if not found:
-        match_question = fuzzy_match(clean_msg)
-        if match_question:
-            reply = responses[match_question].get("en")
-            found = True
-            print("Fuzzy match reply:", reply)
-            user_contexts[user_id] = {"last_topic": match_question, "last_update": time.time()}
+    # Fallback to groq
+    if not reply:
+        context = ""
+        if user_id in user_contexts:
+            last_time = user_contexts[user_id].get("last_update", 0)
+            if time.time() - last_time < 900:
+                context = "Previous topic: " + user_contexts[user_id].get("last_topic", "")
+            else:
+                user_contexts.pop(user_id, None)
 
-    # Groq fallback
-    if not found:
-        reply = ask_groq(incoming_msg, context=context)
+        reply = ask_groq(incoming_msg, context=context, lang="en")
         print("AI reply:", reply)
         user_contexts[user_id] = {"last_topic": incoming_msg, "last_update": time.time()}
 
@@ -122,3 +107,4 @@ def webhook():
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
+

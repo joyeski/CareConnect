@@ -62,83 +62,57 @@ def fuzzy_match(user_input):
 def home():
     return "CareConnect WhatsApp Bot is running!"
 
-@app.route("/webhook", methods=["POST"])
+@app.route("/webhook", methods=['POST'])
 def webhook():
-    incoming_msg = request.values.get("Body", "").strip()
-    user_id = request.values.get("From", "default_user")
-    print("Message from", user_id, ":", incoming_msg)
-
-    resp = MessagingResponse()
-    msg = resp.message()
-
-    # detect language
+    # Get user message
+    user_text = request.values.get('Body', '').strip()
+    
+    if not user_text:
+        reply = "Sorry, I didn't get that. Please type something."
+        resp = MessagingResponse()
+        resp.message(reply)
+        return str(resp)
+    
+    # Step 1: Translate user input to English for matching
     try:
-        detected_lang = detect(incoming_msg)
+        translated_text = GoogleTranslator(source='auto', target='en').translate(user_text)
     except:
-        detected_lang = "en"
-
-    # greetings
-    greetings = ["hi", "hello", "hey", "hii", "helo"]
-    if incoming_msg.lower() in greetings:
-        reply = "Hello, I am CareConnect, your healthbot. How can I help you with health-related queries?"
-        if detected_lang != "en":
-            try:
-                reply = GoogleTranslator(source="en", target=detected_lang).translate(reply)
-            except Exception as e:
-                print("Translation failed:", e)
-        msg.body(reply)
-        print("Replied:", reply)
-        return Response(str(resp), mimetype="application/xml")
-
-    # restore context
-    context = ""
-    if user_id in user_contexts:
-        last_time = user_contexts[user_id].get("last_update", 0)
-        if time.time() - last_time < 900:
-            context = "Previous topic: " + user_contexts[user_id].get("last_topic", "")
-        else:
-            user_contexts.pop(user_id, None)
-
-    reply, found = None, False
-
-    # exact match
-    if incoming_msg.lower() in [q.lower() for q in responses.keys()]:
-        for q, ans in responses.items():
-            if q.lower() == incoming_msg.lower():
-                reply = ans.get("en")
-                found = True
-                user_contexts[user_id] = {"last_topic": q, "last_update": time.time()}
-                print("Exact match reply:", reply)
-                break
-
-    # fuzzy match
-    if not found:
-        match_question = fuzzy_match(incoming_msg)
-        if match_question:
-            reply = responses[match_question].get("en")
-            found = True
-            user_contexts[user_id] = {"last_topic": match_question, "last_update": time.time()}
-            print("Fuzzy match reply:", reply)
-
-    # AI fallback
-    if not found:
-        reply = ask_groq(incoming_msg, context=context)
-        user_contexts[user_id] = {"last_topic": incoming_msg, "last_update": time.time()}
-        print("AI reply:", reply)
-
-    # translate if user not English
-    if detected_lang != "en":
+        translated_text = user_text  # fallback if translation fails
+    
+    # Step 2: Find the best match in responses
+    match_question, score = process.extractOne(translated_text, responses.keys())
+    
+    if score < 50:  # threshold for fuzzy match
+        reply_en = "Sorry, I don't have an answer for that. Please ask something else."
+    else:
+        reply_en = responses[match_question]["en"]
+    
+    # Step 3: Translate reply back to user language if needed
+    try:
+        # Detect language of the original message using Deep Translator auto-detect
+        user_lang = GoogleTranslator(source='auto', target='en').detect(user_text)
+    except:
+        user_lang = 'en'  # fallback
+    
+    if user_lang != 'en':
         try:
-            reply = GoogleTranslator(source="en", target=detected_lang).translate(reply)
-        except Exception as e:
-            print("Translation failed:", e)
+            reply = GoogleTranslator(source='en', target=user_lang).translate(reply_en)
+        except:
+            reply = reply_en
+    else:
+        reply = reply_en
+    
+    # Step 4: Send reply via Twilio
+    resp = MessagingResponse()
+    resp.message(reply)
+    return str(resp)
 
-    msg.body(reply)
-    print("Sending to", user_id, ":", reply)
-    return Response(str(resp), mimetype="application/xml")
+if __name__ == "__main__":
+    app.run(debug=True)
 
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
+
 

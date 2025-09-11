@@ -49,7 +49,7 @@ def ask_groq(user_input, context="", lang="en"):
 
 def fuzzy_match(user_input):
     result = process.extractOne(user_input, questions_list, scorer=fuzz.ratio)
-    if result and result[1] >= 70:  # confidence threshold
+    if result and result[1] >= 70:  # minimum confidence
         return result[0]
     return None
 
@@ -77,7 +77,7 @@ def webhook():
     lang = "en"
     context = ""
 
-    # Restore recent conversation
+    # Restore conversation if recent
     if user_id in user_contexts:
         last_time = user_contexts[user_id].get("last_update", 0)
         if time.time() - last_time < 900:  # 15 minutes

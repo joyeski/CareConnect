@@ -4,7 +4,7 @@ import time
 from flask import Flask, request, Response
 from twilio.twiml.messaging_response import MessagingResponse
 from langdetect import detect
-from rapidfuzz import process
+from rapidfuzz import fuzz, process
 from groq import Groq
 from deep_translator import GoogleTranslator
 
@@ -30,7 +30,6 @@ STRICT RULES:
 5) Use the provided conversation context for follow-ups.
 """
 
-# user context store
 user_contexts = {}
 
 def ask_groq(user_input, context="", lang="en"):
@@ -50,20 +49,13 @@ def ask_groq(user_input, context="", lang="en"):
     except Exception as e:
         return f"AI request failed: {e}"
 
-def fuzzy_match(user_input):
-    text = user_input.lower()
-    for key in questions_list:
-        if key.lower() in text:
-            return key
-    match, score, _ = process.extractOne(user_input, questions_list, scorer=fuzz.ratio)
-    return match if score > 80 else None
-
 @app.route("/", methods=["GET"])
 def home():
     return "CareConnect WhatsApp Bot is running!"
-@app.route("/webhook", methods=['POST'])
+
+@app.route("/webhook", methods=["POST"])
 def webhook():
-    user_text = request.values.get('Body', '').strip()
+    user_text = request.values.get("Body", "").strip()
 
     if not user_text:
         resp = MessagingResponse()
@@ -72,42 +64,43 @@ def webhook():
 
     # Step 1: Translate user input to English for matching
     try:
-        translated_text = GoogleTranslator(source='auto', target='en').translate(user_text)
+        translated_text = GoogleTranslator(source="auto", target="en").translate(user_text)
     except Exception:
-        translated_text = user_text  # fallback if translation fails
+        translated_text = user_text  # fallback
 
-    # Step 2: Fuzzy match in responses safely
+    # Step 2: Fuzzy match in responses
     try:
-        result = process.extractOne(translated_text, responses.keys())
-        if result is None:
-            match_question, score = None, 0
+        result = process.extractOne(translated_text, responses.keys(), scorer=fuzz.ratio)
+        if result:
+            match_question, score = result[0], result[1]
         else:
-            match_question, score = result[0], result[1]  # ignore extra values
+            match_question, score = None, 0
     except Exception:
         match_question, score = None, 0
 
-    # Step 3: Select response in English
-    if score < 50 or match_question is None:
-        reply_en = "Sorry, I don't have an answer for that. Please ask something else."
-    else:
+    # Step 3: Select response
+    if score >= 60 and match_question:
         reply_en = responses[match_question]["en"]
+    else:
+        # Use Groq AI as fallback
+        reply_en = ask_groq(translated_text)
 
-    # Step 4: Detect user language and translate response back
+    # Step 4: Detect original language
     try:
-        # Deep Translator auto-detect for original message
-        user_lang = GoogleTranslator(source='auto', target='en').detect(user_text)
-    except Exception:
-        user_lang = 'en'
+        user_lang = detect(user_text)
+    except:
+        user_lang = "en"
 
-    if user_lang != 'en':
+    # Step 5: Translate reply back if needed
+    if user_lang != "en":
         try:
-            reply = GoogleTranslator(source='en', target=user_lang).translate(reply_en)
+            reply = GoogleTranslator(source="en", target=user_lang).translate(reply_en)
         except Exception:
             reply = reply_en
     else:
         reply = reply_en
 
-    # Step 5: Send reply via Twilio
+    # Step 6: Send reply
     resp = MessagingResponse()
     resp.message(reply)
     return str(resp)
@@ -115,6 +108,3 @@ def webhook():
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
-
-
-

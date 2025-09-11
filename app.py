@@ -56,7 +56,7 @@ def fuzzy_match(user_input):
         if key.lower() in text:
             return key
     match, score, _ = process.extractOne(user_input, questions_list, scorer=fuzz.ratio)
-    return match if score > 60 else None
+    return match if score > 80 else None
 
 @app.route("/", methods=["GET"])
 def home():
@@ -141,3 +141,4 @@ def webhook():
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
+

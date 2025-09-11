@@ -37,16 +37,19 @@ def clean_text(text):
     return text.lower().translate(str.maketrans('', '', string.punctuation)).strip()
 
 def get_language(text):
-    """Detects the language of the input text."""
+    """Detects the language of the input text, limited to 'hi' and 'en'."""
     try:
-        return detect(text)
+        lang = detect(text)
+        if lang == 'hi':
+            return 'hi'
+        return 'en'
     except LangDetectException:
-        return "en" # Default to English if detection fails
+        return 'en'
 
 def ask_groq(user_input, context="", lang="en"):
     if not client:
         return "AI engine not working (no API key found)."
-
+    
     # Instruct the AI to respond in the detected language
     prompt_with_lang = f"Respond in {lang}. {context}\n\nUser: {user_input}"
     
@@ -63,12 +66,6 @@ def ask_groq(user_input, context="", lang="en"):
         return response.choices[0].message.content.strip()
     except Exception as e:
         return f"AI request failed: {e}"
-
-def fuzzy_match(user_input):
-    match, score, _ = process.extractOne(user_input, questions_list, scorer=fuzz.ratio)
-    if score >= 70:
-        return match
-    return None
 
 @app.route("/", methods=["GET"])
 def home():
@@ -89,9 +86,7 @@ def webhook():
     # --- Greeting Check ---
     greetings = {
         "en": ["hi", "hello", "hey", "hii", "helo"],
-        "es": ["hola"],
         "hi": ["namaste", "namaskar"],
-        # Add more languages and greetings here
     }
     
     current_greetings = greetings.get(user_lang, greetings.get("en", []))

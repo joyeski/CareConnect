@@ -5,13 +5,12 @@ from flask import Flask, request, Response
 from twilio.twiml.messaging_response import MessagingResponse
 from langdetect import detect
 from rapidfuzz import fuzz, process
-import groq
-from googletrans import Translator
-
+from groq import Groq
+from deep_translator import GoogleTranslator
 
 app = Flask(__name__)
 
-# loading responses from file
+# load responses
 with open("responses.json", "r", encoding="utf-8") as f:
     responses = json.load(f)
 
@@ -19,12 +18,8 @@ questions_list = list(responses.keys())
 
 # groq setup
 api_key = os.getenv("GROQ_API_KEY")
-if api_key:
-    client = Groq(api_key=api_key)
-else:
-    client = None
+client = Groq(api_key=api_key) if api_key else None
 
-# the system rules for the AI
 SYSTEM_PROMPT = """You are CareConnect, a rural health assistant.
 STRICT RULES:
 1) Always respond in ENGLISH, even if user writes in Hindi or Hinglish.
@@ -35,7 +30,7 @@ STRICT RULES:
 5) Use the provided conversation context for follow-ups.
 """
 
-# storing user context
+# user context store
 user_contexts = {}
 
 def ask_groq(user_input, context="", lang="en"):
@@ -61,17 +56,11 @@ def fuzzy_match(user_input):
         if key.lower() in text:
             return key
     match, score, _ = process.extractOne(user_input, questions_list, scorer=fuzz.ratio)
-    if score > 60:
-        return match
-    return None
+    return match if score > 60 else None
 
 @app.route("/", methods=["GET"])
 def home():
     return "CareConnect WhatsApp Bot is running!"
-
-from googletrans import Translator
-
-translator = Translator()
 
 @app.route("/webhook", methods=["POST"])
 def webhook():
@@ -84,7 +73,7 @@ def webhook():
 
     # detect language
     try:
-        detected_lang = translator.detect(incoming_msg).lang
+        detected_lang = detect(incoming_msg)
     except:
         detected_lang = "en"
 
@@ -92,19 +81,16 @@ def webhook():
     greetings = ["hi", "hello", "hey", "hii", "helo"]
     if incoming_msg.lower() in greetings:
         reply = "Hello, I am CareConnect, your healthbot. How can I help you with health-related queries?"
-        # translate if needed
         if detected_lang != "en":
             try:
-                reply = translator.translate(reply, dest=detected_lang).text
+                reply = GoogleTranslator(source="en", target=detected_lang).translate(reply)
             except Exception as e:
-                print("⚠️ Translation failed:", e)
+                print("Translation failed:", e)
         msg.body(reply)
         print("Replied:", reply)
         return Response(str(resp), mimetype="application/xml")
 
-    lang = "en"  # always process in English
-
-    # context restore
+    # restore context
     context = ""
     if user_id in user_contexts:
         last_time = user_contexts[user_id].get("last_update", 0)
@@ -113,38 +99,37 @@ def webhook():
         else:
             user_contexts.pop(user_id, None)
 
-    reply = None
-    found = False
+    reply, found = None, False
 
-    # check exact match
+    # exact match
     if incoming_msg.lower() in [q.lower() for q in responses.keys()]:
         for q, ans in responses.items():
             if q.lower() == incoming_msg.lower():
-                reply = ans.get("en")  # always store English answers
+                reply = ans.get("en")
                 found = True
-                print("Exact match reply:", reply)
                 user_contexts[user_id] = {"last_topic": q, "last_update": time.time()}
+                print("Exact match reply:", reply)
                 break
 
-    # check fuzzy match
+    # fuzzy match
     if not found:
         match_question = fuzzy_match(incoming_msg)
         if match_question:
             reply = responses[match_question].get("en")
             found = True
-            print("Fuzzy match reply:", reply)
             user_contexts[user_id] = {"last_topic": match_question, "last_update": time.time()}
+            print("Fuzzy match reply:", reply)
 
-    # if no match found, ask groq
+    # AI fallback
     if not found:
-        reply = ask_groq(incoming_msg, context=context, lang=lang)
-        print("AI reply:", reply)
+        reply = ask_groq(incoming_msg, context=context)
         user_contexts[user_id] = {"last_topic": incoming_msg, "last_update": time.time()}
+        print("AI reply:", reply)
 
-    # translate reply if needed
+    # translate if user not English
     if detected_lang != "en":
         try:
-            reply = translator.translate(reply, dest=detected_lang).text
+            reply = GoogleTranslator(source="en", target=detected_lang).translate(reply)
         except Exception as e:
             print("Translation failed:", e)
 
@@ -156,5 +141,3 @@ def webhook():
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
-
-

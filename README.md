@@ -32,42 +32,56 @@ careconnect/
 
 **Installation & Setup**
 
-1.Clone the repository
-  git clone https://github.com/yourusername/careconnect.git
-  cd careconnect
 
-2.Install dependencies
-  pip install -r requirements.txt
+1.Push your project code to GitHub.
 
-3.Set environment variables
-  TWILIO_ACCOUNT_SID
-  TWILIO_AUTH_TOKEN
-  GROQ_API_KEY (optional, for AI fallback)
-  GOOGLE_APPLICATION_CREDENTIALS (optional, for translation)
+2.Create a new Web Service on Render:
 
-4.Run the Flask server
-  python app.py
+Connect your GitHub repository.
 
-5.Expose your local server (for WhatsApp testing via Twilio Sandbox)
-  ngrok http 5000
+Select Python as environment.
 
-6.Configure Twilio Webhook
-  Point your Twilio WhatsApp sandbox webhook to:
-  https://your-ngrok-url/webhook
+Set build command: pip install -r requirements.txt
+
+Set start command: gunicorn app:app
+
+3.Add environment variables in Render:
+
+TWILIO_ACCOUNT_SID
+
+TWILIO_AUTH_TOKEN
+
+GROQ_API_KEY (optional, for AI fallback)
+
+GOOGLE_APPLICATION_CREDENTIALS (optional, for translation)
+
+4.Once deployed, Render will give you a public URL like:
+https://careconnect.onrender.com
+
+5.Go to Twilio WhatsApp Sandbox settings and set the webhook:
+
+https://careconnect.onrender.com/webhook
 
 **Example Queries**
 
-"hi" → Greeting response
+"hello" → Greeting response
+
 "What is malaria?" → Predefined health info
+
 "symptoms of typhoid" → Fuzzy matched response
+
 "Tell me about leukemia and it's treatment" → AI fallback response
 
 **Future Enhancements**
 
 Real-time outbreak info via government datasets
+
 Multi-language support with Google Translate API
+
 Integration with telemedicine services
+
 Analytics dashboard for common queries
 
 **License**
+
 MIT License – feel free to use and improve this project.

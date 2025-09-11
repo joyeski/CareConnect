@@ -5,8 +5,6 @@ from flask import Flask, request, Response
 from twilio.twiml.messaging_response import MessagingResponse
 from rapidfuzz import fuzz, process
 from groq import Groq
-from deep_translator import GoogleTranslator
-from langdetect import detect
 
 app = Flask(__name__)
 
@@ -32,7 +30,7 @@ STRICT RULES:
 # Store user contexts
 user_contexts = {}
 
-def ask_groq(user_input, context=""):
+def ask_groq(user_input, context="", lang="en"):
     if not client:
         return "AI engine not working (no API key found)."
     try:
@@ -51,7 +49,7 @@ def ask_groq(user_input, context=""):
 
 def fuzzy_match(user_input):
     result = process.extractOne(user_input, questions_list, scorer=fuzz.ratio)
-    if result and result[1] >= 70:  # minimum confidence
+    if result and result[1] >= 70:  # confidence threshold
         return result[0]
     return None
 
@@ -68,71 +66,55 @@ def webhook():
     resp = MessagingResponse()
     msg = resp.message()
 
-    # 1. Detect language of incoming message
-    try:
-        detected_lang = detect(incoming_msg)
-    except:
-        detected_lang = "en"
-
-    # 2. Translate user input to English for internal processing
-    user_msg_en = incoming_msg
-    if detected_lang != "en":
-        try:
-            user_msg_en = GoogleTranslator(source="auto", target="en").translate(incoming_msg)
-        except Exception:
-            user_msg_en = incoming_msg
-
-    # Greetings (handled directly)
+    # Greetings
     greetings = ["hi", "hello", "hey", "hii", "helo"]
-    if user_msg_en.lower() in greetings:
-        reply_en = "Hello, I am CareConnect, your healthbot. How can I help you with health-related queries?"
-    else:
-        context = ""
-        if user_id in user_contexts:
-            last_time = user_contexts[user_id].get("last_update", 0)
-            if time.time() - last_time < 900:  # 15 minutes
-                context = "Previous topic: " + user_contexts[user_id].get("last_topic", "")
-            else:
-                user_contexts.pop(user_id, None)
+    if incoming_msg.lower() in greetings:
+        reply = "Hello, I am CareConnect, your healthbot. How can I help you with health-related queries?"
+        msg.body(reply)
+        print("Replied:", reply)
+        return Response(str(resp), mimetype="application/xml")
 
-        reply_en = None
-        found = False
+    lang = "en"
+    context = ""
 
-        # Exact match
-        if user_msg_en.lower() in [q.lower() for q in responses.keys()]:
-            for q, ans in responses.items():
-                if q.lower() == user_msg_en.lower():
-                    reply_en = ans.get("en")
-                    found = True
-                    print("Exact match reply:", reply_en)
-                    user_contexts[user_id] = {"last_topic": q, "last_update": time.time()}
-                    break
+    # Restore recent conversation
+    if user_id in user_contexts:
+        last_time = user_contexts[user_id].get("last_update", 0)
+        if time.time() - last_time < 900:  # 15 minutes
+            context = "Previous topic: " + user_contexts[user_id].get("last_topic", "")
+        else:
+            user_contexts.pop(user_id, None)
 
-        # Fuzzy match
-        if not found:
-            match_question = fuzzy_match(user_msg_en)
-            if match_question:
-                reply_en = responses[match_question].get("en")
+    reply = None
+    found = False
+
+    # Exact match
+    if incoming_msg.lower() in [q.lower() for q in responses.keys()]:
+        for q, ans in responses.items():
+            if q.lower() == incoming_msg.lower():
+                reply = ans.get("en")
                 found = True
-                print("Fuzzy match reply:", reply_en)
-                user_contexts[user_id] = {"last_topic": match_question, "last_update": time.time()}
+                print("Exact match reply:", reply)
+                user_contexts[user_id] = {"last_topic": q, "last_update": time.time()}
+                break
 
-        # Groq fallback
-        if not found:
-            reply_en = ask_groq(user_msg_en, context=context)
-            print("AI reply:", reply_en)
-            user_contexts[user_id] = {"last_topic": user_msg_en, "last_update": time.time()}
+    # Fuzzy match
+    if not found:
+        match_question = fuzzy_match(incoming_msg)
+        if match_question:
+            reply = responses[match_question].get("en")
+            found = True
+            print("Fuzzy match reply:", reply)
+            user_contexts[user_id] = {"last_topic": match_question, "last_update": time.time()}
 
-    # 3. Translate reply back into user's language (if not English)
-    final_reply = reply_en
-    if detected_lang != "en":
-        try:
-            final_reply = GoogleTranslator(source="en", target=detected_lang).translate(reply_en)
-        except Exception:
-            final_reply = reply_en
+    # Groq AI fallback
+    if not found:
+        reply = ask_groq(incoming_msg, context=context, lang=lang)
+        print("AI reply:", reply)
+        user_contexts[user_id] = {"last_topic": incoming_msg, "last_update": time.time()}
 
-    msg.body(final_reply)
-    print("Sending to", user_id, ":", final_reply)
+    msg.body(reply)
+    print("Sending to", user_id, ":", reply)
     return Response(str(resp), mimetype="application/xml")
 
 if __name__ == "__main__":

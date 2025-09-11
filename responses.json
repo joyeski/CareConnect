@@ -1,0 +1,174 @@
+{
+  "fever": {
+    "en": "Fever is a temporary rise in body temperature. Drink plenty of fluids and rest. If it lasts more than 3 days, consult a doctor.",
+    "hi": "बुखार शरीर के तापमान में अस्थायी वृद्धि है। अधिक पानी पिएं और आराम करें। यदि यह 3 दिनों से अधिक रहे तो डॉक्टर से संपर्क करें।"
+  },
+  "cold": {
+    "en": "Common cold causes runny nose, sneezing, and sore throat. Drink warm fluids and rest. Usually recovers in 7 days.",
+    "hi": "सर्दी-जुकाम से नाक बहना, छींक आना और गले में खराश होती है। गर्म तरल पिएं और आराम करें। आमतौर पर 7 दिनों में ठीक हो जाता है।"
+  },
+  "cough": {
+    "en": "Cough can be due to infection or allergy. Drink warm water, avoid cold foods, and see a doctor if persistent.",
+    "hi": "खांसी संक्रमण या एलर्जी के कारण हो सकती है। गुनगुना पानी पिएं, ठंडी चीजें न खाएं और यदि लगातार रहे तो डॉक्टर से मिलें।"
+  },
+  "dengue": {
+    "en": "Dengue is spread by Aedes mosquitoes. Symptoms include high fever, body pain, and rash. Avoid self-medication and consult a doctor immediately.",
+    "hi": "डेंगू एडीज मच्छरों से फैलता है। लक्षणों में तेज बुखार, शरीर दर्द और लाल चकत्ते शामिल हैं। स्वयं दवा न लें और तुरंत डॉक्टर से संपर्क करें।"
+  },
+  "malaria": {
+    "en": "Malaria is spread by Anopheles mosquitoes. Use mosquito nets and repellents. Seek medical help if you have fever with chills.",
+    "hi": "मलेरिया एनोफिलीज मच्छरों से फैलता है। मच्छरदानी और रिपेलेंट का उपयोग करें। यदि आपको ठंड लगने के साथ बुखार हो तो डॉक्टर से संपर्क करें।"
+  },
+  "chikungunya": {
+    "en": "Chikungunya causes fever and severe joint pain. Spread by Aedes mosquitoes. Drink fluids and consult a doctor.",
+    "hi": "चिकनगुनिया में बुखार और जोड़ों में तेज दर्द होता है। यह एडीज मच्छरों से फैलता है। तरल पदार्थ पिएं और डॉक्टर से मिलें।"
+  },
+  "typhoid": {
+    "en": "Typhoid spreads through contaminated food and water. Symptoms include fever, abdominal pain, and weakness.",
+    "hi": "टाइफाइड दूषित भोजन और पानी से फैलता है। लक्षणों में बुखार, पेट दर्द और कमजोरी शामिल हैं।"
+  },
+  "cholera": {
+    "en": "Cholera spreads through dirty water. Drink clean, boiled water and maintain hygiene.",
+    "hi": "हैजा गंदे पानी से फैलता है। साफ उबला हुआ पानी पिएं और स्वच्छता बनाए रखें।"
+  },
+  "diarrhea": {
+    "en": "Diarrhea leads to watery stools and dehydration. Drink ORS and fluids. Consult a doctor if severe.",
+    "hi": "दस्त से पानी जैसी शौच और डिहाइड्रेशन होता है। ओआरएस और तरल पिएं। गंभीर स्थिति में डॉक्टर से मिलें।"
+  },
+  "jaundice": {
+    "en": "Jaundice causes yellowing of eyes and skin. Often linked to liver problems. Avoid oily food and consult a doctor.",
+    "hi": "पीलिया में आंख और त्वचा पीली हो जाती है। यह अक्सर लिवर की समस्या से जुड़ा होता है। तैलीय भोजन न खाएं और डॉक्टर से मिलें।"
+  },
+  "covid": {
+    "en": "COVID-19 spreads through droplets. Wear mask, wash hands, and get vaccinated.",
+    "hi": "कोविड-19 बूंदों से फैलता है। मास्क पहनें, हाथ धोएं और टीका लगवाएं।"
+  },
+  "asthma": {
+    "en": "Asthma causes difficulty in breathing. Avoid dust, smoke, and always carry inhaler if prescribed.",
+    "hi": "अस्थमा में सांस लेने में कठिनाई होती है। धूल, धुआं से बचें और यदि इनहेलर दिया गया है तो हमेशा साथ रखें।"
+  },
+  "tuberculosis": {
+    "en": "TB is an infectious disease affecting lungs. Symptoms: persistent cough, fever, weight loss. Treatment is free in India.",
+    "hi": "टीबी एक संक्रामक रोग है जो फेफड़ों को प्रभावित करता है। लक्षण: लगातार खांसी, बुखार, वजन घटना। भारत में इसका इलाज मुफ्त है।"
+  },
+  "anemia": {
+    "en": "Anemia is low hemoglobin in blood. Eat iron-rich foods like spinach, jaggery, and beans.",
+    "hi": "एनीमिया में खून में हीमोग्लोबिन कम होता है। पालक, गुड़ और दालें जैसी आयरन युक्त चीजें खाएं।"
+  },
+  "heatstroke": {
+    "en": "Heatstroke happens due to extreme heat. Drink water, stay cool, and avoid going out in peak sun.",
+    "hi": "लू ज्यादा गर्मी में लगती है। पानी पिएं, ठंडा रहें और दोपहर की धूप से बचें।"
+  },
+  "dehydration": {
+    "en": "Dehydration happens when body loses water. Drink ORS, coconut water, and fluids.",
+    "hi": "डिहाइड्रेशन में शरीर का पानी कम हो जाता है। ओआरएस, नारियल पानी और तरल पिएं।"
+  },
+  "snakebite": {
+    "en": "For snakebite, keep patient still and rush to hospital. Do not try home remedies.",
+    "hi": "सांप के काटने पर मरीज को स्थिर रखें और तुरंत अस्पताल ले जाएं। घरेलू उपाय न करें।"
+  },
+  "burns": {
+    "en": "For minor burns, put cool water. Do not apply toothpaste or oil. Severe burns need hospital care.",
+    "hi": "हल्की जलन पर ठंडा पानी डालें। टूथपेस्ट या तेल न लगाएं। गंभीर जलन के लिए अस्पताल जाएं।"
+  },
+  "fracture": {
+    "en": "Fracture is a broken bone. Immobilize the area and go to hospital immediately.",
+    "hi": "फ्रैक्चर हड्डी टूटना है। उस जगह को हिलाएं नहीं और तुरंत अस्पताल जाएं।"
+  },
+  "menstrual_hygiene": {
+    "en": "Use clean sanitary pads or menstrual cups. Change every 4-6 hours to prevent infection.",
+    "hi": "स्वच्छ सेनेटरी पैड या मेंस्ट्रुअल कप का उपयोग करें। संक्रमण से बचने के लिए हर 4-6 घंटे में बदलें।"
+  },
+  "nutrition": {
+    "en": "Eat a balanced diet with cereals, pulses, vegetables, fruits, and milk daily.",
+    "hi": "अनाज, दालें, सब्जियां, फल और दूध के साथ संतुलित आहार लें।"
+  },
+  "vitamin_d": {
+    "en": "Vitamin D is important for bones. Sunlight in morning is best source.",
+    "hi": "विटामिन डी हड्डियों के लिए जरूरी है। सुबह की धूप इसका सबसे अच्छा स्रोत है।"
+  },
+  "iron_deficiency": {
+    "en": "Iron deficiency leads to weakness. Eat jaggery, spinach, beetroot, and pulses.",
+    "hi": "आयरन की कमी से कमजोरी होती है। गुड़, पालक, चुकंदर और दालें खाएं।"
+  },
+  "handwashing": {
+    "en": "Wash hands with soap for at least 20 seconds before eating and after toilet use.",
+    "hi": "खाने से पहले और शौचालय के बाद कम से कम 20 सेकंड तक साबुन से हाथ धोएं।"
+  },
+  "vaccination": {
+    "en": "Vaccines protect against diseases like polio, measles, and COVID. Get vaccinated on time.",
+    "hi": "टीके पोलियो, खसरा और कोविड जैसी बीमारियों से बचाते हैं। समय पर टीकाकरण कराएं।"
+  },
+  "eye_care": {
+    "en": "Avoid rubbing eyes. Wash with clean water if irritation occurs. Use spectacles if advised.",
+    "hi": "आंखें न मलें। जलन होने पर साफ पानी से धोएं। चश्मा डॉक्टर की सलाह पर लगाएं।"
+  },
+  "ear_care": {
+    "en": "Do not use sharp objects in ears. If pain or discharge, consult a doctor.",
+    "hi": "कानों में नुकीली चीजें न डालें। दर्द या बहाव होने पर डॉक्टर से मिलें।"
+  },
+  "toothache": {
+    "en": "Toothache may be due to cavity. Rinse mouth with warm salt water and see a dentist.",
+    "hi": "दांत दर्द कैविटी के कारण हो सकता है। गुनगुने नमक के पानी से कुल्ला करें और दंत चिकित्सक से मिलें।"
+  },
+  "oral_hygiene": {
+    "en": "Brush twice daily and floss regularly to maintain oral hygiene.",
+    "hi": "मौखिक स्वच्छता के लिए दिन में दो बार ब्रश करें और नियमित फ्लॉस करें।"
+  },
+  "hypertension": {
+    "en": "High BP increases risk of heart disease. Eat low-salt diet and exercise regularly.",
+    "hi": "हाई बीपी से दिल की बीमारी का खतरा बढ़ता है। कम नमक वाला भोजन खाएं और नियमित व्यायाम करें।"
+  },
+  "diabetes": {
+    "en": "Diabetes causes high sugar levels. Eat healthy, exercise, and take medicines on time.",
+    "hi": "डायबिटीज में शुगर लेवल बढ़ जाता है। स्वस्थ खाएं, व्यायाम करें और दवा समय पर लें।"
+  },
+  "obesity": {
+    "en": "Obesity increases risk of diabetes and heart disease. Eat less junk food and stay active.",
+    "hi": "मोटापा डायबिटीज और दिल की बीमारी का खतरा बढ़ाता है। जंक फूड कम खाएं और सक्रिय रहें।"
+  },
+  "heart_attack": {
+    "en": "Heart attack symptoms: chest pain, sweating, shortness of breath. Call emergency immediately.",
+    "hi": "हार्ट अटैक के लक्षण: सीने में दर्द, पसीना आना, सांस फूलना। तुरंत आपातकालीन सेवा को बुलाएं।"
+  },
+  "stroke": {
+    "en": "Stroke symptoms: face drooping, arm weakness, speech difficulty. Rush to hospital immediately.",
+    "hi": "स्ट्रोक के लक्षण: चेहरा ढीला पड़ना, हाथ कमजोर होना, बोलने में कठिनाई। तुरंत अस्पताल ले जाएं।"
+  },
+  "allergy": {
+    "en": "Allergy causes sneezing, rash, or breathing problems. Avoid allergens and consult doctor.",
+    "hi": "एलर्जी से छींक, चकत्ते या सांस की समस्या होती है। एलर्जन से बचें और डॉक्टर से मिलें।"
+  },
+  "food_poisoning": {
+    "en": "Food poisoning causes vomiting and diarrhea. Drink fluids and consult doctor if severe.",
+    "hi": "फूड पॉयजनिंग में उल्टी और दस्त होते हैं। तरल पदार्थ पिएं और गंभीर स्थिति में डॉक्टर से मिलें।"
+  },
+  "skin_infection": {
+    "en": "Skin infections cause redness, itching, or boils. Keep area clean and use prescribed cream.",
+    "hi": "त्वचा संक्रमण में लालिमा, खुजली या फोड़े हो सकते हैं। जगह को साफ रखें और दवा लगाएं।"
+  },
+  "heat_rash": {
+    "en": "Heat rash appears in hot weather. Wear cotton clothes and stay cool.",
+    "hi": "घमौरियां गर्मी में होती हैं। सूती कपड़े पहनें और ठंडा रहें।"
+  },
+  "depression": {
+    "en": "Depression causes sadness and loss of interest. Talk to loved ones and seek professional help.",
+    "hi": "डिप्रेशन में उदासी और रुचि की कमी होती है। प्रियजनों से बात करें और विशेषज्ञ से मदद लें।"
+  },
+  "anxiety": {
+    "en": "Anxiety causes restlessness and worry. Relaxation techniques and counseling help.",
+    "hi": "एंग्जायटी में बेचैनी और चिंता होती है। आराम तकनीकें और काउंसलिंग सहायक होती हैं।"
+  },
+  "yoga": {
+    "en": "Yoga improves flexibility, strength, and mental health. Practice daily for 30 minutes.",
+    "hi": "योग से लचीलापन, ताकत और मानसिक स्वास्थ्य बेहतर होता है। रोजाना 30 मिनट अभ्यास करें।"
+  },
+  "sleep": {
+    "en": "Adults need 7-8 hours of sleep. Maintain a regular sleep routine.",
+    "hi": "वयस्कों को 7-8 घंटे की नींद चाहिए। नियमित नींद का समय बनाए रखें।"
+  },
+  "water_intake": {
+    "en": "Drink 8-10 glasses of water daily to stay hydrated.",
+    "hi": "हाइड्रेटेड रहने के लिए रोजाना 8-10 गिलास पानी पिएं।"
+  }
+}

@@ -21,9 +21,13 @@ The bot can answer health-related questions (like fever, dengue, nutrition, hygi
 **Project Structure**
 
 careconnect/
+ 
  ├── app.py                # Main Flask app with chatbot logic
+ 
  ├── responses.json        # Predefined health responses
+ 
  ├── requirements.txt      # Dependencies
+ 
  ├── README.md             # Project documentation
 
 **Installation & Setup**

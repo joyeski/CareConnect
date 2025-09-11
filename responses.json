@@ -1,4 +1,8 @@
 {
+  "greeting": {
+        "en": "Hello, I am CareConnect. How can I help you?",
+        "hi": "नमस्ते, मैं केयरकनेक्ट हूं। मैं आपकी कैसे मदद कर सकता हूं?"
+  },
   "fever": {
     "en": "Fever is a temporary rise in body temperature. Drink plenty of fluids and rest. If it lasts more than 3 days, consult a doctor.",
     "hi": "बुखार शरीर के तापमान में अस्थायी वृद्धि है। अधिक पानी पिएं और आराम करें। यदि यह 3 दिनों से अधिक रहे तो डॉक्टर से संपर्क करें।"
@@ -172,3 +176,4 @@
     "hi": "हाइड्रेटेड रहने के लिए रोजाना 8-10 गिलास पानी पिएं।"
   }
 }
+
